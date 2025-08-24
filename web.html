@@ -1,0 +1,736 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Minimalist Notes</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        /* Custom animations */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+        
+        .fade-in {
+            animation: fadeIn 0.3s ease-out forwards;
+        }
+        
+        .pulse {
+            animation: pulse 1.5s infinite;
+        }
+        
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        
+        ::-webkit-scrollbar-track {
+            background: #1a1a1a;
+        }
+        
+        ::-webkit-scrollbar-thumb {
+            background: #333;
+            border-radius: 4px;
+        }
+        
+        ::-webkit-scrollbar-thumb:hover {
+            background: #444;
+        }
+        
+        /* Calendar styling */
+        .calendar-day {
+            transition: all 0.2s ease;
+        }
+        
+        .calendar-day:hover {
+            background-color: #333;
+            transform: scale(1.05);
+        }
+        
+        .calendar-day.today {
+            border: 1px solid #4f46e5;
+        }
+        
+        .calendar-day.selected {
+            background-color: #4f46e5;
+        }
+        
+        /* Timer styling */
+        .timer-input {
+            background: transparent;
+            border: none;
+            color: white;
+            font-size: 2rem;
+            width: 60px;
+            text-align: center;
+        }
+        
+        .timer-input:focus {
+            outline: none;
+            border-bottom: 1px solid #4f46e5;
+        }
+        
+        /* Todo item animation */
+        .todo-item {
+            transition: all 0.3s ease;
+        }
+        
+        .todo-item.completed {
+            opacity: 0.6;
+            text-decoration: line-through;
+        }
+        
+        .todo-item.deleting {
+            transform: translateX(100%);
+            opacity: 0;
+        }
+    </style>
+</head>
+<body class="bg-black text-gray-200 min-h-screen">
+    <div class="container mx-auto px-4 py-8">
+        <!-- Header -->
+        <header class="flex justify-between items-center mb-8">
+            <h1 class="text-3xl font-bold text-indigo-500">Minimalist Notes</h1>
+            <div class="flex space-x-4">
+                <button id="notes-tab" class="px-4 py-2 bg-indigo-600 rounded-lg font-medium">Notes</button>
+                <button id="calendar-tab" class="px-4 py-2 bg-gray-800 rounded-lg font-medium">Calendar</button>
+                <button id="todo-tab" class="px-4 py-2 bg-gray-800 rounded-lg font-medium">Todo & Timer</button>
+            </div>
+        </header>
+        
+        <!-- Main Content -->
+        <main>
+            <!-- Notes Section -->
+            <section id="notes-section" class="mb-12">
+                <div class="flex flex-col lg:flex-row gap-8">
+                    <!-- Note Editor -->
+                    <div class="lg:w-2/3">
+                        <div class="bg-gray-900 rounded-xl p-6 shadow-lg">
+                            <div class="flex justify-between items-center mb-4">
+                                <h2 class="text-xl font-semibold">New Note</h2>
+                                <button id="save-note" class="bg-indigo-600 hover:bg-indigo-700 px-4 py-2 rounded-lg transition">
+                                    <i class="fas fa-save mr-2"></i>Save
+                                </button>
+                            </div>
+                            <input type="text" id="note-title" placeholder="Title" class="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-3 mb-4 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                            <textarea id="note-content" placeholder="Start typing your note here..." class="w-full h-64 bg-gray-800 border border-gray-700 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"></textarea>
+                        </div>
+                    </div>
+                    
+                    <!-- Notes List -->
+                    <div class="lg:w-1/3">
+                        <div class="bg-gray-900 rounded-xl p-6 shadow-lg h-full">
+                            <div class="flex justify-between items-center mb-4">
+                                <h2 class="text-xl font-semibold">Your Notes</h2>
+                                <button id="new-note" class="text-indigo-500 hover:text-indigo-400 transition">
+                                    <i class="fas fa-plus"></i>
+                                </button>
+                            </div>
+                            <div id="notes-list" class="space-y-3 max-h-[500px] overflow-y-auto">
+                                <!-- Notes will be added here dynamically -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+            
+            <!-- Calendar Section (Hidden by default) -->
+            <section id="calendar-section" class="mb-12 hidden">
+                <div class="bg-gray-900 rounded-xl p-6 shadow-lg">
+                    <div class="flex justify-between items-center mb-6">
+                        <h2 class="text-2xl font-semibold">Calendar</h2>
+                        <div class="flex items-center space-x-4">
+                            <button id="prev-month" class="text-indigo-500 hover:text-indigo-400 transition">
+                                <i class="fas fa-chevron-left"></i>
+                            </button>
+                            <h3 id="current-month" class="text-xl font-medium">June 2023</h3>
+                            <button id="next-month" class="text-indigo-500 hover:text-indigo-400 transition">
+                                <i class="fas fa-chevron-right"></i>
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="grid grid-cols-7 gap-2 mb-4">
+                        <div class="text-center font-medium py-2">Sun</div>
+                        <div class="text-center font-medium py-2">Mon</div>
+                        <div class="text-center font-medium py-2">Tue</div>
+                        <div class="text-center font-medium py-2">Wed</div>
+                        <div class="text-center font-medium py-2">Thu</div>
+                        <div class="text-center font-medium py-2">Fri</div>
+                        <div class="text-center font-medium py-2">Sat</div>
+                    </div>
+                    
+                    <div id="calendar-days" class="grid grid-cols-7 gap-2">
+                        <!-- Calendar days will be added here dynamically -->
+                    </div>
+                    
+                    <!-- Event Form -->
+                    <div id="event-form" class="mt-8 bg-gray-800 p-4 rounded-lg hidden">
+                        <h3 class="text-lg font-medium mb-3">Add Event</h3>
+                        <input type="text" id="event-title" placeholder="Event title" class="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 mb-3 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                        <div class="flex space-x-3 mb-3">
+                            <input type="time" id="event-time" class="bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                            <input type="color" id="event-color" value="#4f46e5" class="h-10 w-10 cursor-pointer">
+                        </div>
+                        <div class="flex justify-end space-x-3">
+                            <button id="cancel-event" class="px-4 py-2 bg-gray-700 rounded-lg hover:bg-gray-600 transition">Cancel</button>
+                            <button id="save-event" class="px-4 py-2 bg-indigo-600 rounded-lg hover:bg-indigo-700 transition">Save</button>
+                        </div>
+                    </div>
+                    
+                    <!-- Events List -->
+                    <div id="events-list" class="mt-8 space-y-3">
+                        <h3 class="text-lg font-medium mb-3">Today's Events</h3>
+                        <!-- Events will be added here dynamically -->
+                    </div>
+                </div>
+            </section>
+            
+            <!-- Todo & Timer Section (Hidden by default) -->
+            <section id="todo-section" class="hidden">
+                <div class="flex flex-col lg:flex-row gap-8">
+                    <!-- Todo List -->
+                    <div class="lg:w-1/2">
+                        <div class="bg-gray-900 rounded-xl p-6 shadow-lg">
+                            <div class="flex justify-between items-center mb-4">
+                                <h2 class="text-xl font-semibold">Todo List</h2>
+                                <button id="new-todo" class="text-indigo-500 hover:text-indigo-400 transition">
+                                    <i class="fas fa-plus"></i>
+                                </button>
+                            </div>
+                            
+                            <div class="flex mb-4">
+                                <input type="text" id="todo-input" placeholder="Add a new task..." class="flex-grow bg-gray-800 border border-gray-700 rounded-l-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                                <button id="add-todo" class="bg-indigo-600 hover:bg-indigo-700 px-4 py-2 rounded-r-lg transition">
+                                    Add
+                                </button>
+                            </div>
+                            
+                            <div id="todo-list" class="space-y-2 max-h-[400px] overflow-y-auto">
+                                <!-- Todo items will be added here dynamically -->
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Timer -->
+                    <div class="lg:w-1/2">
+                        <div class="bg-gray-900 rounded-xl p-6 shadow-lg h-full">
+                            <h2 class="text-xl font-semibold mb-6">Focus Timer</h2>
+                            
+                            <div class="flex flex-col items-center justify-center">
+                                <div id="timer-display" class="text-6xl font-mono mb-8 flex items-center">
+                                    <input type="number" id="minutes" class="timer-input" min="0" max="59" value="25">:
+                                    <input type="number" id="seconds" class="timer-input" min="0" max="59" value="00">
+                                </div>
+                                
+                                <div class="flex space-x-4 mb-8">
+                                    <button id="start-timer" class="bg-indigo-600 hover:bg-indigo-700 px-6 py-3 rounded-full transition flex items-center">
+                                        <i class="fas fa-play mr-2"></i> Start
+                                    </button>
+                                    <button id="pause-timer" class="bg-gray-700 hover:bg-gray-600 px-6 py-3 rounded-full transition flex items-center hidden">
+                                        <i class="fas fa-pause mr-2"></i> Pause
+                                    </button>
+                                    <button id="reset-timer" class="bg-gray-700 hover:bg-gray-600 px-6 py-3 rounded-full transition flex items-center">
+                                        <i class="fas fa-redo mr-2"></i> Reset
+                                    </button>
+                                </div>
+                                
+                                <div class="w-full max-w-xs">
+                                    <h3 class="text-lg font-medium mb-3">Presets</h3>
+                                    <div class="grid grid-cols-3 gap-3">
+                                        <button class="timer-preset bg-gray-800 hover:bg-gray-700 px-4 py-2 rounded-lg transition" data-minutes="25" data-seconds="0">25:00</button>
+                                        <button class="timer-preset bg-gray-800 hover:bg-gray-700 px-4 py-2 rounded-lg transition" data-minutes="15" data-seconds="0">15:00</button>
+                                        <button class="timer-preset bg-gray-800 hover:bg-gray-700 px-4 py-2 rounded-lg transition" data-minutes="5" data-seconds="0">05:00</button>
+                                        <button class="timer-preset bg-gray-800 hover:bg-gray-700 px-4 py-2 rounded-lg transition" data-minutes="45" data-seconds="0">45:00</button>
+                                        <button class="timer-preset bg-gray-800 hover:bg-gray-700 px-4 py-2 rounded-lg transition" data-minutes="10" data-seconds="0">10:00</button>
+                                        <button class="timer-preset bg-gray-800 hover:bg-gray-700 px-4 py-2 rounded-lg transition" data-minutes="1" data-seconds="0">01:00</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script>
+        // Tab Navigation
+        document.getElementById('notes-tab').addEventListener('click', () => {
+            document.getElementById('notes-section').classList.remove('hidden');
+            document.getElementById('calendar-section').classList.add('hidden');
+            document.getElementById('todo-section').classList.add('hidden');
+            
+            document.getElementById('notes-tab').classList.replace('bg-gray-800', 'bg-indigo-600');
+            document.getElementById('calendar-tab').classList.replace('bg-indigo-600', 'bg-gray-800');
+            document.getElementById('todo-tab').classList.replace('bg-indigo-600', 'bg-gray-800');
+        });
+        
+        document.getElementById('calendar-tab').addEventListener('click', () => {
+            document.getElementById('notes-section').classList.add('hidden');
+            document.getElementById('calendar-section').classList.remove('hidden');
+            document.getElementById('todo-section').classList.add('hidden');
+            
+            document.getElementById('notes-tab').classList.replace('bg-indigo-600', 'bg-gray-800');
+            document.getElementById('calendar-tab').classList.replace('bg-gray-800', 'bg-indigo-600');
+            document.getElementById('todo-tab').classList.replace('bg-indigo-600', 'bg-gray-800');
+            
+            // Initialize calendar if not already done
+            if (!window.calendarInitialized) {
+                initCalendar();
+                window.calendarInitialized = true;
+            }
+        });
+        
+        document.getElementById('todo-tab').addEventListener('click', () => {
+            document.getElementById('notes-section').classList.add('hidden');
+            document.getElementById('calendar-section').classList.add('hidden');
+            document.getElementById('todo-section').classList.remove('hidden');
+            
+            document.getElementById('notes-tab').classList.replace('bg-indigo-600', 'bg-gray-800');
+            document.getElementById('calendar-tab').classList.replace('bg-indigo-600', 'bg-gray-800');
+            document.getElementById('todo-tab').classList.replace('bg-gray-800', 'bg-indigo-600');
+        });
+        
+        // Notes Functionality
+        let notes = JSON.parse(localStorage.getItem('notes')) || [];
+        let currentNoteId = null;
+        
+        function renderNotes() {
+            const notesList = document.getElementById('notes-list');
+            notesList.innerHTML = '';
+            
+            notes.forEach(note => {
+                const noteElement = document.createElement('div');
+                noteElement.className = 'bg-gray-800 p-4 rounded-lg cursor-pointer hover:bg-gray-700 transition fade-in';
+                noteElement.innerHTML = `
+                    <h3 class="font-medium truncate">${note.title || 'Untitled Note'}</h3>
+                    <p class="text-sm text-gray-400 truncate">${note.content.substring(0, 50)}${note.content.length > 50 ? '...' : ''}</p>
+                    <div class="flex justify-between items-center mt-2 text-xs text-gray-500">
+                        <span>${new Date(note.updatedAt).toLocaleString()}</span>
+                        <button class="delete-note text-red-500 hover:text-red-400" data-id="${note.id}">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                `;
+                
+                noteElement.addEventListener('click', () => loadNote(note.id));
+                notesList.appendChild(noteElement);
+            });
+        }
+        
+        function loadNote(id) {
+            const note = notes.find(n => n.id === id);
+            if (note) {
+                currentNoteId = id;
+                document.getElementById('note-title').value = note.title;
+                document.getElementById('note-content').value = note.content;
+            }
+        }
+        
+        function saveNote() {
+            const title = document.getElementById('note-title').value;
+            const content = document.getElementById('note-content').value;
+            
+            if (!content.trim()) return;
+            
+            const now = new Date();
+            
+            if (currentNoteId) {
+                // Update existing note
+                const noteIndex = notes.findIndex(n => n.id === currentNoteId);
+                if (noteIndex !== -1) {
+                    notes[noteIndex] = {
+                        ...notes[noteIndex],
+                        title,
+                        content,
+                        updatedAt: now
+                    };
+                }
+            } else {
+                // Create new note
+                const newNote = {
+                    id: Date.now().toString(),
+                    title,
+                    content,
+                    createdAt: now,
+                    updatedAt: now
+                };
+                notes.unshift(newNote);
+                currentNoteId = newNote.id;
+            }
+            
+            localStorage.setItem('notes', JSON.stringify(notes));
+            renderNotes();
+            
+            // Show save confirmation
+            const saveBtn = document.getElementById('save-note');
+            saveBtn.innerHTML = '<i class="fas fa-check mr-2"></i>Saved!';
+            setTimeout(() => {
+                saveBtn.innerHTML = '<i class="fas fa-save mr-2"></i>Save';
+            }, 2000);
+        }
+        
+        function newNote() {
+            currentNoteId = null;
+            document.getElementById('note-title').value = '';
+            document.getElementById('note-content').value = '';
+            document.getElementById('note-content').focus();
+        }
+        
+        function deleteNote(id) {
+            notes = notes.filter(note => note.id !== id);
+            if (currentNoteId === id) {
+                newNote();
+            }
+            localStorage.setItem('notes', JSON.stringify(notes));
+            renderNotes();
+        }
+        
+        // Calendar Functionality
+        function initCalendar() {
+            const now = new Date();
+            let currentMonth = now.getMonth();
+            let currentYear = now.getFullYear();
+            let selectedDate = now;
+            
+            function renderCalendar() {
+                const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+                document.getElementById('current-month').textContent = `${monthNames[currentMonth]} ${currentYear}`;
+                
+                const firstDay = new Date(currentYear, currentMonth, 1).getDay();
+                const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
+                const daysInPrevMonth = new Date(currentYear, currentMonth, 0).getDate();
+                
+                const calendarDays = document.getElementById('calendar-days');
+                calendarDays.innerHTML = '';
+                
+                // Previous month's days
+                for (let i = firstDay - 1; i >= 0; i--) {
+                    const day = document.createElement('div');
+                    day.className = 'calendar-day bg-gray-800 text-gray-600 p-2 rounded-lg text-center';
+                    day.textContent = daysInPrevMonth - i;
+                    calendarDays.appendChild(day);
+                }
+                
+                // Current month's days
+                const today = new Date();
+                for (let i = 1; i <= daysInMonth; i++) {
+                    const day = document.createElement('div');
+                    day.className = 'calendar-day bg-gray-800 hover:bg-gray-700 p-2 rounded-lg text-center cursor-pointer';
+                    day.textContent = i;
+                    
+                    const date = new Date(currentYear, currentMonth, i);
+                    if (date.toDateString() === today.toDateString()) {
+                        day.classList.add('today');
+                    }
+                    
+                    if (selectedDate && date.toDateString() === selectedDate.toDateString()) {
+                        day.classList.add('selected');
+                    }
+                    
+                    day.addEventListener('click', () => {
+                        selectedDate = new Date(currentYear, currentMonth, i);
+                        renderCalendar();
+                        renderEvents();
+                    });
+                    
+                    calendarDays.appendChild(day);
+                }
+                
+                // Next month's days
+                const totalDays = firstDay + daysInMonth;
+                const nextMonthDays = totalDays <= 35 ? 35 - totalDays : 42 - totalDays;
+                
+                for (let i = 1; i <= nextMonthDays; i++) {
+                    const day = document.createElement('div');
+                    day.className = 'calendar-day bg-gray-800 text-gray-600 p-2 rounded-lg text-center';
+                    day.textContent = i;
+                    calendarDays.appendChild(day);
+                }
+            }
+            
+            function renderEvents() {
+                const eventsList = document.getElementById('events-list');
+                eventsList.innerHTML = '<h3 class="text-lg font-medium mb-3">Today\'s Events</h3>';
+                
+                // In a real app, you would load events from storage
+                // This is just a demo with sample events
+                const sampleEvents = [
+                    { id: '1', title: 'Team Meeting', time: '10:00', color: '#4f46e5' },
+                    { id: '2', title: 'Lunch with Client', time: '12:30', color: '#10b981' },
+                    { id: '3', title: 'Project Deadline', time: '17:00', color: '#ef4444' }
+                ];
+                
+                if (sampleEvents.length === 0) {
+                    eventsList.innerHTML += '<p class="text-gray-400">No events for today</p>';
+                } else {
+                    sampleEvents.forEach(event => {
+                        const eventElement = document.createElement('div');
+                        eventElement.className = 'bg-gray-800 p-3 rounded-lg flex items-center fade-in';
+                        eventElement.innerHTML = `
+                            <div class="w-3 h-3 rounded-full mr-3" style="background-color: ${event.color}"></div>
+                            <div class="flex-grow">
+                                <h4 class="font-medium">${event.title}</h4>
+                                <p class="text-sm text-gray-400">${event.time}</p>
+                            </div>
+                            <button class="text-gray-400 hover:text-white">
+                                <i class="fas fa-ellipsis-v"></i>
+                            </button>
+                        `;
+                        eventsList.appendChild(eventElement);
+                    });
+                }
+                
+                // Add "Add Event" button
+                const addEventBtn = document.createElement('button');
+                addEventBtn.className = 'mt-4 text-indigo-500 hover:text-indigo-400 flex items-center';
+                addEventBtn.innerHTML = '<i class="fas fa-plus mr-2"></i> Add Event';
+                addEventBtn.addEventListener('click', () => {
+                    document.getElementById('event-form').classList.remove('hidden');
+                });
+                eventsList.appendChild(addEventBtn);
+            }
+            
+            // Navigation
+            document.getElementById('prev-month').addEventListener('click', () => {
+                currentMonth--;
+                if (currentMonth < 0) {
+                    currentMonth = 11;
+                    currentYear--;
+                }
+                renderCalendar();
+            });
+            
+            document.getElementById('next-month').addEventListener('click', () => {
+                currentMonth++;
+                if (currentMonth > 11) {
+                    currentMonth = 0;
+                    currentYear++;
+                }
+                renderCalendar();
+            });
+            
+            // Event Form
+            document.getElementById('cancel-event').addEventListener('click', () => {
+                document.getElementById('event-form').classList.add('hidden');
+            });
+            
+            document.getElementById('save-event').addEventListener('click', () => {
+                // In a real app, you would save the event to storage
+                document.getElementById('event-form').classList.add('hidden');
+                renderEvents();
+            });
+            
+            // Initial render
+            renderCalendar();
+            renderEvents();
+        }
+        
+        // Todo List Functionality
+        let todos = JSON.parse(localStorage.getItem('todos')) || [];
+        
+        function renderTodos() {
+            const todoList = document.getElementById('todo-list');
+            todoList.innerHTML = '';
+            
+            todos.forEach((todo, index) => {
+                const todoElement = document.createElement('div');
+                todoElement.className = `todo-item bg-gray-800 p-3 rounded-lg flex items-center ${todo.completed ? 'completed' : ''}`;
+                todoElement.innerHTML = `
+                    <div class="flex items-center flex-grow">
+                        <input type="checkbox" ${todo.completed ? 'checked' : ''} class="mr-3 h-5 w-5 rounded border-gray-600 bg-gray-700 text-indigo-600 focus:ring-indigo-500 cursor-pointer">
+                        <span class="${todo.completed ? 'line-through text-gray-500' : ''}">${todo.text}</span>
+                    </div>
+                    <button class="delete-todo text-gray-400 hover:text-red-500 ml-2" data-id="${todo.id}">
+                        <i class="fas fa-times"></i>
+                    </button>
+                `;
+                
+                const checkbox = todoElement.querySelector('input[type="checkbox"]');
+                checkbox.addEventListener('change', () => toggleTodoComplete(todo.id));
+                
+                const deleteBtn = todoElement.querySelector('.delete-todo');
+                deleteBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    deleteTodo(todo.id);
+                });
+                
+                todoList.appendChild(todoElement);
+            });
+            
+            if (todos.length === 0) {
+                todoList.innerHTML = '<p class="text-gray-400 text-center py-4">No tasks yet. Add one above!</p>';
+            }
+        }
+        
+        function addTodo() {
+            const input = document.getElementById('todo-input');
+            const text = input.value.trim();
+            
+            if (text) {
+                const newTodo = {
+                    id: Date.now().toString(),
+                    text,
+                    completed: false,
+                    createdAt: new Date()
+                };
+                
+                todos.unshift(newTodo);
+                localStorage.setItem('todos', JSON.stringify(todos));
+                input.value = '';
+                renderTodos();
+                
+                // Add animation to new todo
+                const todoItems = document.querySelectorAll('.todo-item');
+                if (todoItems.length > 0) {
+                    todoItems[0].classList.add('fade-in');
+                }
+            }
+        }
+        
+        function toggleTodoComplete(id) {
+            todos = todos.map(todo => {
+                if (todo.id === id) {
+                    return { ...todo, completed: !todo.completed };
+                }
+                return todo;
+            });
+            
+            localStorage.setItem('todos', JSON.stringify(todos));
+            renderTodos();
+        }
+        
+        function deleteTodo(id) {
+            const todoElement = document.querySelector(`.todo-item [data-id="${id}"]`).closest('.todo-item');
+            todoElement.classList.add('deleting');
+            
+            setTimeout(() => {
+                todos = todos.filter(todo => todo.id !== id);
+                localStorage.setItem('todos', JSON.stringify(todos));
+                renderTodos();
+            }, 300);
+        }
+        
+        // Timer Functionality
+        let timerInterval;
+        let timerRunning = false;
+        let totalSeconds = 25 * 60; // Default 25 minutes
+        
+        function updateTimerDisplay() {
+            const minutes = Math.floor(totalSeconds / 60);
+            const seconds = totalSeconds % 60;
+            
+            document.getElementById('minutes').value = minutes.toString().padStart(2, '0');
+            document.getElementById('seconds').value = seconds.toString().padStart(2, '0');
+        }
+        
+        function startTimer() {
+            if (timerRunning) return;
+            
+            timerRunning = true;
+            document.getElementById('start-timer').classList.add('hidden');
+            document.getElementById('pause-timer').classList.remove('hidden');
+            
+            timerInterval = setInterval(() => {
+                if (totalSeconds <= 0) {
+                    clearInterval(timerInterval);
+                    timerRunning = false;
+                    document.getElementById('start-timer').classList.remove('hidden');
+                    document.getElementById('pause-timer').classList.add('hidden');
+                    
+                    // Play alarm sound (in a real app)
+                    alert('Timer finished!');
+                    return;
+                }
+                
+                totalSeconds--;
+                updateTimerDisplay();
+            }, 1000);
+        }
+        
+        function pauseTimer() {
+            clearInterval(timerInterval);
+            timerRunning = false;
+            document.getElementById('start-timer').classList.remove('hidden');
+            document.getElementById('pause-timer').classList.add('hidden');
+        }
+        
+        function resetTimer() {
+            pauseTimer();
+            const minutes = parseInt(document.getElementById('minutes').value) || 0;
+            const seconds = parseInt(document.getElementById('seconds').value) || 0;
+            totalSeconds = minutes * 60 + seconds;
+            updateTimerDisplay();
+        }
+        
+        function setTimerPreset(minutes, seconds) {
+            pauseTimer();
+            totalSeconds = minutes * 60 + seconds;
+            updateTimerDisplay();
+        }
+        
+        // Event Listeners
+        document.addEventListener('DOMContentLoaded', () => {
+            // Notes
+            renderNotes();
+            document.getElementById('save-note').addEventListener('click', saveNote);
+            document.getElementById('new-note').addEventListener('click', newNote);
+            
+            document.addEventListener('click', (e) => {
+                if (e.target.classList.contains('delete-note')) {
+                    deleteNote(e.target.dataset.id);
+                }
+            });
+            
+            // Todo List
+            renderTodos();
+            document.getElementById('add-todo').addEventListener('click', addTodo);
+            document.getElementById('todo-input').addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') addTodo();
+            });
+            document.getElementById('new-todo').addEventListener('click', () => {
+                document.getElementById('todo-input').focus();
+            });
+            
+            // Timer
+            updateTimerDisplay();
+            document.getElementById('start-timer').addEventListener('click', startTimer);
+            document.getElementById('pause-timer').addEventListener('click', pauseTimer);
+            document.getElementById('reset-timer').addEventListener('click', resetTimer);
+            
+            document.querySelectorAll('.timer-preset').forEach(button => {
+                button.addEventListener('click', () => {
+                    const minutes = parseInt(button.dataset.minutes);
+                    const seconds = parseInt(button.dataset.seconds);
+                    setTimerPreset(minutes, seconds);
+                });
+            });
+            
+            // Validate timer inputs
+            document.getElementById('minutes').addEventListener('change', (e) => {
+                let value = parseInt(e.target.value) || 0;
+                if (value < 0) value = 0;
+                if (value > 59) value = 59;
+                e.target.value = value.toString().padStart(2, '0');
+                totalSeconds = value * 60 + (parseInt(document.getElementById('seconds').value) || 0);
+            });
+            
+            document.getElementById('seconds').addEventListener('change', (e) => {
+                let value = parseInt(e.target.value) || 0;
+                if (value < 0) value = 0;
+                if (value > 59) value = 59;
+                e.target.value = value.toString().padStart(2, '0');
+                totalSeconds = (parseInt(document.getElementById('minutes').value) || 0) * 60 + value;
+            });
+        });
+    </script>
+</body>
+</html>
